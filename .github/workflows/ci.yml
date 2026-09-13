@@ -18,8 +18,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -82,6 +85,7 @@ jobs:
   dev-plan:
     name: Terraform Dev Plan
     runs-on: ubuntu-latest
+
     needs:
       - security-scan
 
@@ -93,6 +97,7 @@ jobs:
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -138,6 +143,7 @@ jobs:
   prod-plan:
     name: Terraform Prod Plan
     runs-on: ubuntu-latest
+
     needs:
       - security-scan
 
@@ -149,6 +155,7 @@ jobs:
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -184,7 +191,6 @@ jobs:
             -input=false \
             -out=tfplan
 
-        
       - name: Upload Prod Plan
         uses: actions/upload-artifact@v4
         with:
