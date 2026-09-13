@@ -1,0 +1,6 @@
+[[allowlists]]
+description = "Allow SonarCloud project configuration"
+
+paths = [
+  '''sonar-project\.properties'''
+]
