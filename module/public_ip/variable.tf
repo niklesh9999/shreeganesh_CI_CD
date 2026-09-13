@@ -1,1 +1,3 @@
-variable "pip" {}
+variable "pip" {
+  type = map(any)
+}

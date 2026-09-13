@@ -5,4 +5,6 @@
 
 # }
 
-variable "nsga" {}
+variable "nsga" {
+  type = map(any)
+}
