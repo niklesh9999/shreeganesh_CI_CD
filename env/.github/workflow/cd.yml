@@ -1,0 +1,194 @@
+name: Terraform CD
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  TF_IN_AUTOMATION: true
+
+jobs:
+
+  # ============================================================
+  # DEV APPLY
+  # ============================================================
+  dev-apply:
+    name: Deploy Dev Environment
+
+    runs-on: ubuntu-latest
+
+    # GitHub Environment
+    # Approval configured in:
+    # Settings → Environments → dev
+    environment:
+      name: dev
+
+    env:
+      TF_WORKING_DIR: env/dev
+
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # --------------------------------------------------------
+      # Azure Login
+      # --------------------------------------------------------
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # --------------------------------------------------------
+      # Create Dev terraform.tfvars
+      # --------------------------------------------------------
+      - name: Create Dev terraform.tfvars
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TFVARS_CONTENT: ${{ secrets.DEV_TFVARS_CONTENT }}
+        run: |
+          printf '%s' "$TFVARS_CONTENT" > terraform.tfvars
+
+      # --------------------------------------------------------
+      # Terraform Init
+      # --------------------------------------------------------
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform init -input=false
+
+      # --------------------------------------------------------
+      # Terraform Validate
+      # --------------------------------------------------------
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform validate
+
+      # --------------------------------------------------------
+      # Terraform Plan
+      # --------------------------------------------------------
+      - name: Terraform Plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform plan \
+            -input=false \
+            -out=tfplan
+
+      # --------------------------------------------------------
+      # Terraform Apply Dev
+      # --------------------------------------------------------
+      - name: Terraform Apply Dev
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform apply \
+            -input=false \
+            -auto-approve \
+            tfplan
+
+
+  # ============================================================
+  # PROD APPLY
+  # ============================================================
+  prod-apply:
+    name: Deploy Prod Environment
+
+    runs-on: ubuntu-latest
+
+    needs:
+      - dev-apply
+
+    # GitHub Environment
+    # Approval configured in:
+    # Settings → Environments → Prod
+    environment:
+      name: Prod
+
+    env:
+      TF_WORKING_DIR: env/prod
+
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # --------------------------------------------------------
+      # Azure Login
+      # --------------------------------------------------------
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # --------------------------------------------------------
+      # Create Prod terraform.tfvars
+      # --------------------------------------------------------
+      - name: Create Prod terraform.tfvars
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TFVARS_CONTENT: ${{ secrets.PROD_TFVARS_CONTENT }}
+        run: |
+          printf '%s' "$TFVARS_CONTENT" > terraform.tfvars
+
+      # --------------------------------------------------------
+      # Terraform Init
+      # --------------------------------------------------------
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform init -input=false
+
+      # --------------------------------------------------------
+      # Terraform Validate
+      # --------------------------------------------------------
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform validate
+
+      # --------------------------------------------------------
+      # Terraform Plan
+      # --------------------------------------------------------
+      - name: Terraform Plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform plan \
+            -input=false \
+            -out=tfplan
+
+      # --------------------------------------------------------
+      # Terraform Apply Prod
+      # --------------------------------------------------------
+      - name: Terraform Apply Prod
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform apply \
+            -input=false \
+            -auto-approve \
+            tfplan
