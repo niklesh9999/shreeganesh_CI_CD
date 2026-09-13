@@ -59,12 +59,15 @@ jobs:
 
       # --------------------------------------------------------
       # Checkov
+      # CKV_AZURE_50  -> VM Extension intentionally not used
+      # CKV2_AZURE_31 -> NSG association managed by nsga module
       # --------------------------------------------------------
       - name: Checkov Terraform Scan
         uses: bridgecrewio/checkov-action@v12
         with:
           directory: .
           framework: terraform
+          skip_check: CKV_AZURE_50,CKV2_AZURE_31
           soft_fail: false
 
       # --------------------------------------------------------

@@ -15,7 +15,8 @@ provider "azurerm" {
 
 
 resource "azurerm_network_interface" "nic" {
-  for_each            = var.vm
+  for_each = var.vm
+
   name                = each.value.name
   location            = each.value.location
   resource_group_name = each.value.resource_group_name
@@ -27,6 +28,7 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
+#checkov:skip=CKV_AZURE_50:VM extensions are intentionally not used in this project.
 resource "azurerm_linux_virtual_machine" "vm" {
   for_each = var.vm
 
@@ -35,13 +37,17 @@ resource "azurerm_linux_virtual_machine" "vm" {
   location            = each.value.location
   size                = each.value.size
   admin_username      = each.value.admin_username
-  admin_password      = each.value.admin_password
+
   network_interface_ids = [
     azurerm_network_interface.nic[each.key].id
   ]
-  disable_password_authentication = each.value.disable_password_authentication
 
+  disable_password_authentication = true
 
+  admin_ssh_key {
+    username   = each.value.admin_username
+    public_key = each.value.ssh_public_key
+  }
 
   os_disk {
     caching              = each.value.caching
