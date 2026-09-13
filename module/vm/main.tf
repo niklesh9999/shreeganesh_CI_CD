@@ -9,9 +9,7 @@ terraform {
   }
 }
 
-provider "azurerm" {
-  features {}
-}
+
 
 
 resource "azurerm_network_interface" "nic" {

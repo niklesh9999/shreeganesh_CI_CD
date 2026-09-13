@@ -15,9 +15,7 @@ terraform {
   }
 }
 
-provider "azurerm" {
-  features {}
-}
+
 
 
 resource "azurerm_subnet_network_security_group_association" "nsga" {
