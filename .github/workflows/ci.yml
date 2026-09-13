@@ -13,31 +13,21 @@ env:
 
 jobs:
 
-  # ============================================================
-  # SECURITY AND QUALITY SCANS
-  # ============================================================
   security-scan:
     name: Security and Quality Scan
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # --------------------------------------------------------
-      # Terraform Format
-      # --------------------------------------------------------
       - name: Terraform Format Check
         run: |
           terraform fmt -check -recursive
 
-      # --------------------------------------------------------
-      # TFLint
-      # --------------------------------------------------------
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v5
 
@@ -49,17 +39,11 @@ jobs:
         run: |
           tflint --recursive
 
-      # --------------------------------------------------------
-      # GitLeaks
-      # --------------------------------------------------------
       - name: GitLeaks Secret Scan
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # --------------------------------------------------------
-      # Checkov
-      # --------------------------------------------------------
       - name: Checkov Terraform Scan
         uses: bridgecrewio/checkov-action@v12
         with:
@@ -68,9 +52,6 @@ jobs:
           skip_check: CKV_AZURE_50,CKV2_AZURE_31
           soft_fail: false
 
-      # --------------------------------------------------------
-      # Trivy
-      # --------------------------------------------------------
       - name: Trivy IaC Scan
         uses: aquasecurity/trivy-action@master
         with:
@@ -79,9 +60,6 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: 1
 
-      # --------------------------------------------------------
-      # Snyk
-      # --------------------------------------------------------
       - name: Install Snyk
         run: |
           npm install -g snyk
@@ -91,13 +69,9 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
           snyk iac test . \
-            --org=nikleshkahalkar123 \
-            --severity-threshold=high \
-            -d
+            --org=niklesh9999 \
+            --severity-threshold=high
 
-      # --------------------------------------------------------
-      # SonarQube
-      # --------------------------------------------------------
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
@@ -105,35 +79,26 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
 
-  # ============================================================
-  # DEV TERRAFORM PLAN
-  # ============================================================
   dev-plan:
     name: Terraform Dev Plan
     runs-on: ubuntu-latest
-
     needs:
       - security-scan
 
     env:
       TF_WORKING_DIR: env/dev
-
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # --------------------------------------------------------
-      # Azure Login
-      # --------------------------------------------------------
       - name: Azure Login
         uses: azure/login@v2
         with:
@@ -142,9 +107,6 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # --------------------------------------------------------
-      # Create Dev terraform.tfvars
-      # --------------------------------------------------------
       - name: Create Dev terraform.tfvars
         working-directory: ${{ env.TF_WORKING_DIR }}
         env:
@@ -152,25 +114,16 @@ jobs:
         run: |
           printf '%s' "$TFVARS_CONTENT" > terraform.tfvars
 
-      # --------------------------------------------------------
-      # Terraform Init
-      # --------------------------------------------------------
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform init -input=false
 
-      # --------------------------------------------------------
-      # Terraform Validate
-      # --------------------------------------------------------
       - name: Terraform Validate
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform validate
 
-      # --------------------------------------------------------
-      # Terraform Plan
-      # --------------------------------------------------------
       - name: Terraform Plan
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
@@ -178,9 +131,6 @@ jobs:
             -input=false \
             -out=tfplan
 
-      # --------------------------------------------------------
-      # Upload Dev Plan
-      # --------------------------------------------------------
       - name: Upload Dev Plan
         uses: actions/upload-artifact@v4
         with:
@@ -188,35 +138,26 @@ jobs:
           path: env/dev/tfplan
 
 
-  # ============================================================
-  # PROD TERRAFORM PLAN
-  # ============================================================
   prod-plan:
     name: Terraform Prod Plan
     runs-on: ubuntu-latest
-
     needs:
       - security-scan
 
     env:
       TF_WORKING_DIR: env/prod
-
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # --------------------------------------------------------
-      # Azure Login
-      # --------------------------------------------------------
       - name: Azure Login
         uses: azure/login@v2
         with:
@@ -225,9 +166,6 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # --------------------------------------------------------
-      # Create Prod terraform.tfvars
-      # --------------------------------------------------------
       - name: Create Prod terraform.tfvars
         working-directory: ${{ env.TF_WORKING_DIR }}
         env:
@@ -235,36 +173,23 @@ jobs:
         run: |
           printf '%s' "$TFVARS_CONTENT" > terraform.tfvars
 
-      # --------------------------------------------------------
-      # Terraform Init
-      # --------------------------------------------------------
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform init -input=false
 
-      # --------------------------------------------------------
-      # Terraform Validate
-      # --------------------------------------------------------
       - name: Terraform Validate
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform validate
 
-      # --------------------------------------------------------
-      # Terraform Plan
-      # --------------------------------------------------------
       - name: Terraform Plan
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform plan \
             -input=false \
             -out=tfplan
-            
 
-      # --------------------------------------------------------
-      # Upload Prod Plan
-      # --------------------------------------------------------
       - name: Upload Prod Plan
         uses: actions/upload-artifact@v4
         with:
