@@ -92,7 +92,8 @@ jobs:
         run: |
           snyk iac test . \
             --org=nikleshkahalkar123 \
-            --severity-threshold=high
+            --severity-threshold=high \
+            -d
 
       # --------------------------------------------------------
       # SonarQube
