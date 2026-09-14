@@ -1,3 +1,5 @@
-variable "vm" {}
+variable "vm" {
+  type = map(any)
+}
 
 

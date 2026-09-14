@@ -1,8 +1,10 @@
 # variable "nsg" {
-  
+
 # }
 # variable "subnet" {
-  
+
 # }
 
-variable "nsga" {}
+variable "nsga" {
+  type = map(any)
+}

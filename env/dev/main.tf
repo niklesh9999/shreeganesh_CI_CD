@@ -49,8 +49,8 @@ module "vm" {
   vm = {
     for key, value in var.vm : key => merge(value, {
       subnet_id = module.subnet.subnet_ids[value.subnet_id]
-    
-    }
+
+      }
     )
 
   }

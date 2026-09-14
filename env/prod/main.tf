@@ -5,16 +5,16 @@ module "rg" {
 }
 
 module "vnet" {
-  depends_on = [ module.rg ]
-  source = "../../module/vnet"
-  vnet   = var.vnet
+  depends_on = [module.rg]
+  source     = "../../module/vnet"
+  vnet       = var.vnet
 
 }
 
 module "nsg" {
-  depends_on = [ module.rg ]
-  source = "../../module/nsg"
-  nsg    = var.nsg
+  depends_on = [module.rg]
+  source     = "../../module/nsg"
+  nsg        = var.nsg
 }
 
 module "subnet" {
@@ -28,8 +28,8 @@ module "subnet" {
 
 
 module "nsga" {
-  depends_on = [ module.subnet,module.nsg ]
-  source = "../../module/nsga"
+  depends_on = [module.subnet, module.nsg]
+  source     = "../../module/nsga"
 
   nsga = {
     for key, value in var.nsga : key => {
