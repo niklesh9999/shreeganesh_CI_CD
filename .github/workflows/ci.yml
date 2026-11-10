@@ -146,6 +146,7 @@ jobs:
             exit 1
           }
           printf '%s' "$TFVARS_CONTENT" > terraform.tfvars
+          
 
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
