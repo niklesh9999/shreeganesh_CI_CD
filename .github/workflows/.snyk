@@ -1,0 +1,10 @@
+version: v1.19.0
+ignore:
+  SNYK-CC-TF-263:
+    - '*':
+        reason: "VM password authentication is an approved project requirement; risk accepted."
+        expires: 2026-12-11T00:00:00.000Z
+  SNYK-CC-TF-79:
+    - '*':
+        reason: "VM password authentication is an approved project requirement; risk accepted."
+        expires: 2026-12-11T00:00:00.000Z
