@@ -149,7 +149,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform init -input=false -lockfile=readonly
+        run: terraform init -input=falsey
 
       - name: Terraform Validate
         working-directory: ${{ env.TF_WORKING_DIR }}
