@@ -53,13 +53,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # CKV2_AZURE_31 is checked against the resolved Terraform Plan.
       - name: Checkov Terraform Source Scan
         uses: bridgecrewio/checkov-action@99bb2caf247dfd9f03cf984373bc6043d4e32ebf # v12.1347.0
         with:
           directory: .
           framework: terraform
-          skip_check: CKV_AZURE_50,CKV2_AZURE_31
+          skip_check: CKV_AZURE_50
           soft_fail: false
 
       - name: Trivy IaC Scan
@@ -73,7 +72,6 @@ jobs:
       - name: Install Snyk
         run: npm install -g snyk@1.1307.2 --ignore-scripts
 
-      # Generate temporary Snyk exceptions for approved VM password authentication.
       - name: Configure Snyk IaC Exceptions
         run: |
           cat > .snyk <<'EOF'
@@ -146,7 +144,6 @@ jobs:
             exit 1
           }
           printf '%s' "$TFVARS_CONTENT" > terraform.tfvars
-          
 
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -178,8 +175,7 @@ jobs:
           checkov -f tfplan.json \
             --framework terraform_plan \
             --repo-root-for-plan-enrichment ../.. \
-            --deep-analysis \
-            --check CKV2_AZURE_31
+            --deep-analysis
 
       - name: Upload Dev Plan
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -261,8 +257,7 @@ jobs:
           checkov -f tfplan.json \
             --framework terraform_plan \
             --repo-root-for-plan-enrichment ../.. \
-            --deep-analysis \
-            --check CKV2_AZURE_31
+            --deep-analysis
 
       - name: Upload Prod Plan
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
