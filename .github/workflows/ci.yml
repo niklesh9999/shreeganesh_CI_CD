@@ -1,3 +1,4 @@
+
 name: Terraform CI/CD
 
 on:
@@ -52,7 +53,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Checkov Terraform Scan
+      # CKV2_AZURE_31 is checked again against the resolved Terraform Plan.
+      - name: Checkov Terraform Source Scan
         uses: bridgecrewio/checkov-action@99bb2caf247dfd9f03cf984373bc6043d4e32ebf # v12.1347.0
         with:
           directory: .
@@ -85,12 +87,15 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-  # STAGE 2: Development Terraform Plan
+
+  # STAGE 2: Development Terraform Plan and Security Validation
   dev-plan:
     name: Terraform Dev Plan
     runs-on: ubuntu-latest
+
     needs:
       - security-scan
+
     if: github.event_name == 'push' || github.event_name == 'pull_request'
 
     env:
@@ -139,6 +144,23 @@ jobs:
             -lock-timeout=5m \
             -out=tfplan
 
+      - name: Install Checkov
+        run: python -m pip install checkov==3.3.16
+
+      - name: Checkov Dev Terraform Plan Scan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          set -e
+          trap 'rm -f tfplan.json' EXIT
+
+          terraform show -json tfplan > tfplan.json
+
+          checkov -f tfplan.json \
+            --framework terraform_plan \
+            --repo-root-for-plan-enrichment ../.. \
+            --deep-analysis \
+            --check CKV2_AZURE_31
+
       - name: Upload Dev Plan
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -147,13 +169,17 @@ jobs:
           if-no-files-found: error
           retention-days: 5
 
-  # STAGE 3: Production Terraform Plan
-  # Runs only after a successful push/merge to main.
+
+  # STAGE 3: Production Terraform Plan and Security Validation
+  # Runs only after main push/merge and successful Dev Plan.
   prod-plan:
     name: Terraform Prod Plan
     runs-on: ubuntu-latest
+
     needs:
       - security-scan
+      - dev-plan
+
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     env:
@@ -202,8 +228,22 @@ jobs:
             -lock-timeout=5m \
             -out=tfplan
 
-          
+      - name: Install Checkov
+        run: python -m pip install checkov==3.3.16
 
+      - name: Checkov Prod Terraform Plan Scan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          set -e
+          trap 'rm -f tfplan.json' EXIT
+
+          terraform show -json tfplan > tfplan.json
+
+          checkov -f tfplan.json \
+            --framework terraform_plan \
+            --repo-root-for-plan-enrichment ../.. \
+            --deep-analysis \
+            --check CKV2_AZURE_31
 
       - name: Upload Prod Plan
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
