@@ -1,1 +1,5 @@
-variable "storage_account" {}
+variable "storage_account" {
+    type = map(any)
+}
+
+
