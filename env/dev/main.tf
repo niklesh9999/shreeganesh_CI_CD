@@ -59,9 +59,9 @@ module "vm" {
 }
 
 
-module "storage_account" {
-  depends_on      = [module.rg]
-  source          = "../../module/storage_account"
-  storage_account = var.storage_account
+# module "storage_account" {
+#   depends_on      = [module.rg]
+#   source          = "../../module/storage_account"
+#   storage_account = var.storage_account
 
-}
+# }
