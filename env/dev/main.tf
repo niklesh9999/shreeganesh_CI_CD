@@ -48,13 +48,20 @@ module "vm" {
   source = "../../module/vm"
   vm = {
     for key, value in var.vm : key => merge(value, {
-      subnet_id = module.subnet.subnet_ids[value.subnet_id]
+      subnet_id    = module.subnet.subnet_ids[value.subnet_id]
+      public_ip_id = module.pip.pip_ids[value.public_ip_name]
 
       }
     )
 
   }
 
+}
 
+
+module "storage_account" {
+  depends_on      = [module.rg]
+  source          = "../../module/storage_account"
+  storage_account = var.storage_account
 
 }

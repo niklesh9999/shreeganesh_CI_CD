@@ -1,25 +1,32 @@
-name: Terraform CI
+name: Terraform CI/CD
 
 on:
   push:
     branches:
       - features
-
+      - main
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
 
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
-  TF_IN_AUTOMATION: true
+  TF_IN_AUTOMATION: "true"
 
 jobs:
 
+  # STAGE 1: Security and Quality Checks
   security-scan:
     name: Security and Quality Scan
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -29,19 +36,16 @@ jobs:
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
 
       - name: Terraform Format Check
-        run: |
-          terraform fmt -check -recursive
+        run: terraform fmt -check -recursive
 
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@ae78205cfffec9e8d93fd2b3115c7e9d3166d4b6 # v5.0.0
 
       - name: Initialize TFLint
-        run: |
-          tflint --init
+        run: tflint --init
 
       - name: Run TFLint
-        run: |
-          tflint --recursive
+        run: tflint --recursive
 
       - name: GitLeaks Secret Scan
         uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
@@ -65,8 +69,7 @@ jobs:
           exit-code: 1
 
       - name: Install Snyk
-        run: |
-          npm install -g snyk@1.1307.2 --ignore-scripts
+        run: npm install -g snyk@1.1307.2 --ignore-scripts
 
       - name: Snyk IaC Scan
         env:
@@ -82,13 +85,13 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-
+  # STAGE 2: Development Terraform Plan
   dev-plan:
     name: Terraform Dev Plan
     runs-on: ubuntu-latest
-
     needs:
       - security-scan
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
 
     env:
       TF_WORKING_DIR: env/dev
@@ -98,7 +101,6 @@ jobs:
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -115,23 +117,26 @@ jobs:
         env:
           TFVARS_CONTENT: ${{ secrets.DEV_TFVARS_CONTENT }}
         run: |
+          test -n "$TFVARS_CONTENT" || {
+            echo "DEV_TFVARS_CONTENT secret is empty or missing."
+            exit 1
+          }
           printf '%s' "$TFVARS_CONTENT" > terraform.tfvars
 
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: |
-          terraform init -input=false
+        run: terraform init -input=false -lockfile=readonly
 
       - name: Terraform Validate
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: |
-          terraform validate
+        run: terraform validate -no-color
 
       - name: Terraform Plan
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform plan \
             -input=false \
+            -lock-timeout=5m \
             -out=tfplan
 
       - name: Upload Dev Plan
@@ -139,14 +144,17 @@ jobs:
         with:
           name: dev-tfplan
           path: env/dev/tfplan
+          if-no-files-found: error
+          retention-days: 5
 
-
+  # STAGE 3: Production Terraform Plan
+  # Runs only after a successful push/merge to main.
   prod-plan:
     name: Terraform Prod Plan
     runs-on: ubuntu-latest
-
     needs:
       - security-scan
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     env:
       TF_WORKING_DIR: env/prod
@@ -156,7 +164,6 @@ jobs:
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -173,28 +180,32 @@ jobs:
         env:
           TFVARS_CONTENT: ${{ secrets.PROD_TFVARS_CONTENT }}
         run: |
+          test -n "$TFVARS_CONTENT" || {
+            echo "PROD_TFVARS_CONTENT secret is empty or missing."
+            exit 1
+          }
           printf '%s' "$TFVARS_CONTENT" > terraform.tfvars
 
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: |
-          terraform init -input=false
+        run: terraform init -input=false -lockfile=readonly
 
       - name: Terraform Validate
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: |
-          terraform validate
+        run: terraform validate -no-color
 
       - name: Terraform Plan
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform plan \
             -input=false \
+            -lock-timeout=5m \
             -out=tfplan
-            
 
       - name: Upload Prod Plan
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: prod-tfplan
           path: env/prod/tfplan
+          if-no-files-found: error
+          retention-days: 5
