@@ -149,7 +149,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform init -input=falsey
+        run: terraform init -input=false
 
       - name: Terraform Validate
         working-directory: ${{ env.TF_WORKING_DIR }}
