@@ -51,9 +51,9 @@ resource "azurerm_network_interface" "nic" {
 
 
 resource "azurerm_linux_virtual_machine" "vm" {
-#checkov:skip=CKV_AZURE_1:SSH authentication configuration is accepted for this project.
-#checkov:skip=CKV_AZURE_149:Password authentication configuration is accepted for this project.
-#checkov:skip=CKV_AZURE_50:VM extensions are intentionally not used in this project.
+  #checkov:skip=CKV_AZURE_1:SSH authentication configuration is accepted for this project.
+  #checkov:skip=CKV_AZURE_149:Password authentication configuration is accepted for this project.
+  #checkov:skip=CKV_AZURE_50:VM extensions are intentionally not used in this project.
   for_each = var.vm
 
   name                = each.value.name
