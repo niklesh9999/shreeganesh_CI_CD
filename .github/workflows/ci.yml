@@ -53,7 +53,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # CKV2_AZURE_31 is checked again against the resolved Terraform Plan.
+      # CKV2_AZURE_31 is checked against the resolved Terraform Plan.
       - name: Checkov Terraform Source Scan
         uses: bridgecrewio/checkov-action@99bb2caf247dfd9f03cf984373bc6043d4e32ebf # v12.1347.0
         with:
@@ -73,12 +73,31 @@ jobs:
       - name: Install Snyk
         run: npm install -g snyk@1.1307.2 --ignore-scripts
 
+      # Generate temporary Snyk exceptions for approved VM password authentication.
+      - name: Configure Snyk IaC Exceptions
+        run: |
+          cat > .snyk <<'EOF'
+          version: v1.19.0
+          ignore:
+            SNYK-CC-TF-263:
+              - '*':
+                  reason: "VM password authentication is an approved project requirement; risk accepted."
+                  expires: 2026-12-11T00:00:00.000Z
+            SNYK-CC-TF-79:
+              - '*':
+                  reason: "VM password authentication is an approved project requirement; risk accepted."
+                  expires: 2026-12-11T00:00:00.000Z
+          EOF
+
+          echo "Snyk exception policy generated."
+
       - name: Snyk IaC Scan
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
           snyk iac test . \
             --org=niklesh9999 \
+            --policy-path=.snyk \
             --severity-threshold=high
 
       - name: SonarQube Scan
@@ -171,7 +190,6 @@ jobs:
 
 
   # STAGE 3: Production Terraform Plan and Security Validation
-  # Runs only after main push/merge and successful Dev Plan.
   prod-plan:
     name: Terraform Prod Plan
     runs-on: ubuntu-latest
